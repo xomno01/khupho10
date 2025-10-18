@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chương Trình Rút Thăm & Vòng Quay May Mắn</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Be+Vietnam+Pro:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-image: url('https://i.ibb.co/wN52qSqb/LI-N-KHU-PH-7-8-9-10-PH-NG-TH-NH-M-T-Y-3.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        /* Lớp phủ để làm rõ chữ trên nền */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(26, 32, 44, 0.85); /* Lớp phủ màu tối bán trong suốt */
+            z-index: -1;
+        }
+        
+        /* Styles cho Tab Navigation */
+        .tab-button {
+            transition: all 0.3s ease;
+            border-bottom: 4px solid transparent;
+        }
+        .tab-button.active {
+            border-bottom-color: #f59e0b; /* yellow-500 */
+            color: #f59e0b;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .mono-font {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .prize-card {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .winner-number {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        #wheel {
+            text-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+        .draw-button {
+            transition: all 0.2s ease;
+        }
+        .draw-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+        }
+        .draw-button:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+
+        /* Confetti Effect */
+        .confetti-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; overflow: hidden; z-index: 1000;
+        }
+        .confetti {
+            position: absolute; width: 10px; height: 10px;
+            background-color: var(--color); opacity: 0;
+            animation: confetti-fall var(--duration) forwards;
+            border-radius: 50%;
+        }
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        /* Modal Styles */
+        .modal {
+            position: fixed; z-index: 1001; left: 0; top: 0;
+            width: 100%; height: 100%; overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background-color: #2d3748; margin: auto; padding: 30px;
+            border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            width: 90%; max-width: 500px; text-align: center;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-buttons button {
+            padding: 12px 25px; margin: 0 10px; border-radius: 8px;
+            font-size: 1.1rem; font-weight: bold; cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .modal-buttons button.yes { background-color: #4CAF50; color: white; border: none; }
+        .modal-buttons button.yes:hover { background-color: #45a049; }
+        .modal-buttons button.no { background-color: #f44336; color: white; border: none; }
+        .modal-buttons button.no:hover { background-color: #da190b; }
+
+        /* Vong Quay May Man Styles */
+        #wheel-container {
+            position: relative;
+            width: 400px;
+            height: 400px;
+            margin: 2rem auto;
+        }
+        #wheel-canvas {
+            transition: transform 5s cubic-bezier(0.25, 0.1, 0.25, 1);
+            transform-origin: center center; /* Ensure rotation is from the center */
+        }
+        #wheel-pointer {
+            position: absolute;
+            left: 50%;
+            bottom: -20px; /* Chuyển mũi tên xuống dưới */
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-bottom: 50px solid #f59e0b; /* Đổi thành border-bottom để mũi tên hướng lên */
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center min-h-screen p-4">
+
+    <div class="w-full max-w-5xl mx-auto">
+        <!-- Tab Navigation --><nav class="flex justify-center border-b border-gray-700 mb-8">
+            <button id="tab-rut-tham" class="tab-button active text-xl font-bold py-4 px-6">Rút Thăm Trúng Thưởng</button>
+            <button id="tab-vong-quay" class="tab-button text-xl font-bold py-4 px-6">Vòng Quay May Mắn</button>
+        </nav>
+
+        <!-- Tab Content: Rút Thăm Trúng Thưởng --><div id="content-rut-tham" class="tab-content active">
+            <header class="text-center mb-8">
+                <h1 class="text-4xl md:text-5xl font-bold text-yellow-400 tracking-wider">CHƯƠNG TRÌNH RÚT THĂM TRÚNG THƯỞNG</h1>
+                <p class="text-gray-400 mt-2">Chúc Quý Vị May Mắn!</p>
+            </header>
+            <main class="text-center mb-8">
+                <div id="display-area" class="bg-gray-800 rounded-2xl p-8 mb-6 border-2 border-gray-700 shadow-lg">
+                    <p id="current-prize-label" class="text-2xl text-cyan-400 mb-4 font-bold"></p>
+                    <div id="wheel" class="mono-font text-8xl md:text-9xl font-bold my-4 transition-colors duration-300">00</div>
+                </div>
+                <button id="drawButton" class="draw-button bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-2xl py-4 px-12 rounded-full shadow-lg hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    BẮT ĐẦU QUAY
+                </button>
+            </main>
+            <section id="prizes-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"></section>
+        </div>
+
+        <!-- Tab Content: Vòng Quay May Mắn --><div id="content-vong-quay" class="tab-content">
+            <header class="text-center mb-8">
+                <h1 class="text-4xl md:text-5xl font-bold text-yellow-400 tracking-wider">VÒNG QUAY MAY MẮN</h1>
+                <p class="text-gray-400 mt-2">Hãy thử vận may của bạn!</p>
+            </header>
+            <main class="text-center mb-8">
+                <div id="wheel-container">
+                    <div id="wheel-pointer"></div>
+                    <canvas id="wheel-canvas" width="400" height="400"></canvas>
+                </div>
+                <button id="spinButton" class="draw-button bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold text-2xl py-4 px-12 rounded-full shadow-lg hover:from-green-600 hover:to-teal-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                    QUAY
+                </button>
+                <p id="wheel-result" class="text-4xl text-yellow-300 mt-6 font-bold h-12"></p>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Hỏi Xác nhận --><div id="confirmModal" class="modal hidden">
+        <div class="modal-content text-white">
+            <h2 class="text-3xl font-bold text-yellow-300 mb-4">Xác nhận người trúng giải</h2>
+            <p class="text-xl mb-6">Số <span id="modalWinnerNumber" class="text-yellow-400 font-bold text-4xl mx-2">00</span> vừa quay có người nhận không?</p>
+            <div class="modal-buttons">
+                <button class="yes" id="modalConfirmYes">CÓ</button>
+                <button class="no" id="modalConfirmNo">KHÔNG</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container cho hiệu ứng Confetti --><div id="confetti-container" class="confetti-container hidden"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // --- TAB SWITCHING LOGIC ---
+            const tabRutTham = document.getElementById('tab-rut-tham');
+            const tabVongQuay = document.getElementById('tab-vong-quay');
+            const contentRutTham = document.getElementById('content-rut-tham');
+            const contentVongQuay = document.getElementById('content-vong-quay');
+            
+            tabRutTham.addEventListener('click', () => {
+                tabRutTham.classList.add('active');
+                tabVongQuay.classList.remove('active');
+                contentRutTham.classList.add('active');
+                contentVongQuay.classList.remove('active');
+            });
+
+            tabVongQuay.addEventListener('click', () => {
+                tabVongQuay.classList.add('active');
+                tabRutTham.classList.remove('active');
+                contentVongQuay.classList.add('active');
+                contentRutTham.classList.remove('active');
+                // Ensure wheel is drawn when tab is activated
+                const canvas = document.getElementById('wheel-canvas');
+                const ctx = canvas.getContext('2d');
+                drawWheel(ctx, canvas); // Redraw wheel if switching tabs
+            });
+
+            // --- PHẦN 1: RÚT THĂM TRÚNG THƯỞNG ---
+            setupRutTham();
+
+            // --- PHẦN 2: VÒNG QUAY MAY MẮN ---
+            setupVongQuay();
+
+        });
+
+        // --- SETUP FUNCTION FOR RÚT THĂM TRÚNG THƯỞNG ---
+        function setupRutTham() {
+            const prizeTiers = [
+                { id: 'consolation', name: 'Giải Khuyến Khích', count: 14, winners: [], color: 'bg-blue-800', textColor: 'text-blue-300', doConfetti: false },
+                { id: 'third', name: 'Giải Ba', count: 3, winners: [], color: 'bg-green-800', textColor: 'text-green-300', doConfetti: false },
+                { id: 'second', name: 'Giải Nhì', count: 2, winners: [], color: 'bg-gray-700', textColor: 'text-gray-200', doConfetti: true },
+                { id: 'first', name: 'Giải Nhất', count: 1, winners: [], color: 'bg-yellow-600', textColor: 'text-yellow-200', doConfetti: true },
+            ];
+            let availableNumbers = Array.from({ length: 90 }, (_, i) => i + 1);
+            let currentTierIndex = 0;
+            let isSpinning = false;
+            let currentWinningNumber = null;
+
+            const wheel = document.getElementById('wheel');
+            const drawButton = document.getElementById('drawButton');
+            const currentPrizeLabel = document.getElementById('current-prize-label');
+            const prizesGrid = document.getElementById('prizes-grid');
+            const confirmModal = document.getElementById('confirmModal');
+            const modalWinnerNumberSpan = document.getElementById('modalWinnerNumber');
+            const modalConfirmYes = document.getElementById('modalConfirmYes');
+            const modalConfirmNo = document.getElementById('modalConfirmNo');
+            const confettiContainer = document.getElementById('confetti-container');
+
+            function initializeUI() {
+                prizesGrid.innerHTML = ''; // Clear grid before initializing
+                prizeTiers.forEach(tier => {
+                    const prizeCard = document.createElement('div');
+                    prizeCard.id = `prize-${tier.id}`;
+                    prizeCard.className = `prize-card ${tier.color} p-6 rounded-xl border border-gray-600`;
+                    prizeCard.innerHTML = `
+                        <h3 class="text-2xl font-bold ${tier.textColor} mb-4">${tier.name} (${tier.count} giải)</h3>
+                        <div id="winners-${tier.id}" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>`;
+                    prizesGrid.appendChild(prizeCard);
+                });
+            }
+
+            function updatePrizeLabel() {
+                if (currentTierIndex >= prizeTiers.length) {
+                    currentPrizeLabel.textContent = 'Đã quay xong tất cả giải thưởng!';
+                    drawButton.textContent = 'KẾT THÚC';
+                    drawButton.disabled = true;
+                    return;
+                }
+                const currentTier = prizeTiers[currentTierIndex];
+                const remaining = currentTier.count - currentTier.winners.length;
+                if (remaining > 0) {
+                    currentPrizeLabel.textContent = `Chuẩn bị quay ${currentTier.name} (${remaining} giải còn lại)`;
+                    drawButton.textContent = 'QUAY SỐ';
+                    drawButton.disabled = false;
+                } else {
+                    currentTierIndex++;
+                    updatePrizeLabel();
+                }
+            }
+
+            drawButton.addEventListener('click', () => {
+                if (isSpinning || currentTierIndex >= prizeTiers.length) return;
+                startSpinning();
+            });
+
+            function startSpinning() {
+                isSpinning = true;
+                drawButton.disabled = true;
+                drawButton.textContent = 'ĐANG QUAY...';
+                let spinCount = 0;
+                const spinInterval = setInterval(() => {
+                    const randomNumber = Math.floor(Math.random() * 90) + 1;
+                    wheel.textContent = randomNumber.toString().padStart(2, '0');
+                    const randomColorClass = ['text-white', 'text-red-400', 'text-green-400', 'text-blue-400', 'text-yellow-400', 'text-purple-400'][Math.floor(Math.random() * 6)];
+                    wheel.className = `mono-font text-8xl md:text-9xl font-bold my-4 transition-colors duration-100 ${randomColorClass}`;
+                    spinCount++;
+                    if (spinCount > 30) {
+                        clearInterval(spinInterval);
+                        currentWinningNumber = pickRandomNumber();
+                        displayWinnerNumber(currentWinningNumber);
+                        showConfirmModal();
+                    }
+                }, 100);
+            }
+
+            function pickRandomNumber() {
+                if (availableNumbers.length === 0) return null;
+                const winnerIndex = Math.floor(Math.random() * availableNumbers.length);
+                return availableNumbers[winnerIndex];
+            }
+
+            function displayWinnerNumber(number) {
+                if (number === null) { wheel.textContent = '--'; return; }
+                const currentTier = prizeTiers[currentTierIndex];
+                wheel.textContent = number.toString().padStart(2, '0');
+                wheel.className = `mono-font text-8xl md:text-9xl font-bold my-4 transition-colors duration-300 ${currentTier.textColor}`;
+            }
+
+            function showConfirmModal() {
+                if (currentWinningNumber === null) { finishCurrentDraw(); return; }
+                modalWinnerNumberSpan.textContent = currentWinningNumber.toString().padStart(2, '0');
+                confirmModal.classList.remove('hidden');
+            }
+
+            modalConfirmYes.addEventListener('click', () => {
+                confirmModal.classList.add('hidden');
+                processWinner(currentWinningNumber);
+            });
+
+            modalConfirmNo.addEventListener('click', () => {
+                confirmModal.classList.add('hidden');
+                finishCurrentDraw();
+            });
+
+            function processWinner(winnerNumber) {
+                const currentTier = prizeTiers[currentTierIndex];
+                if (!currentTier.winners.includes(winnerNumber)) {
+                    currentTier.winners.push(winnerNumber);
+                }
+                const indexInAvailable = availableNumbers.indexOf(winnerNumber);
+                if (indexInAvailable > -1) { availableNumbers.splice(indexInAvailable, 1); }
+                updateWinnersList(currentTier);
+                if (currentTier.doConfetti) { triggerConfetti(); }
+                finishCurrentDraw();
+            }
+
+            function finishCurrentDraw() {
+                isSpinning = false;
+                currentWinningNumber = null;
+                updatePrizeLabel();
+            }
+
+            function updateWinnersList(tier) {
+                const winnersListContainer = document.getElementById(`winners-${tier.id}`);
+                winnersListContainer.innerHTML = '';
+                tier.winners.sort((a, b) => a - b).forEach(winner => {
+                    const winnerEl = document.createElement('div');
+                    winnerEl.className = 'winner-number mono-font bg-gray-800/50 rounded-md p-2 text-center text-xl font-bold';
+                    winnerEl.textContent = winner.toString().padStart(2, '0');
+                    winnersListContainer.appendChild(winnerEl);
+                });
+            }
+
+            function triggerConfetti() {
+                confettiContainer.classList.remove('hidden');
+                const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722'];
+                for (let i = 0; i < 100; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.setProperty('--color', colors[Math.floor(Math.random() * colors.length)]);
+                    confetti.style.setProperty('--duration', `${Math.random() * 2 + 3}s`);
+                    confetti.style.left = `${Math.random() * 100}vw`;
+                    confetti.style.animationDelay = `${Math.random() * 0.5}s`;
+                    confettiContainer.appendChild(confetti);
+                }
+                setTimeout(() => {
+                    confettiContainer.innerHTML = '';
+                    confettiContainer.classList.add('hidden');
+                }, 5000);
+            }
+
+            initializeUI();
+            updatePrizeLabel();
+        }
+
+        // --- VONG QUAY HELPER FUNCTION (MOVED OUTSIDE FOR GLOBAL SCOPE) ---
+        function drawWheel(ctx, canvas) {
+            const segments = ["TÝ", "SỬU", "DẦN", "MẸO", "THÌN", "TỴ", "NGỌ", "MÙI", "THÂN", "DẬU", "TUẤT", "HỢI"];
+            const colors = ["#8B0000", "#FF4500", "#FFD700", "#ADFF2F", "#008000", "#48D1CC", "#0000CD", "#8A2BE2", "#C71585", "#FF1493", "#A52A2A", "#D2691E"];
+            const segmentAngle = 2 * Math.PI / segments.length;
+            const radius = canvas.width / 2;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            segments.forEach((segment, i) => {
+                ctx.beginPath();
+                ctx.moveTo(radius, radius);
+                ctx.arc(radius, radius, radius - 5, i * segmentAngle, (i + 1) * segmentAngle);
+                ctx.closePath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fill();
+                ctx.strokeStyle = '#4A5568'; // gray-700
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw text
+                ctx.save();
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px Be Vietnam Pro';
+                ctx.translate(radius, radius);
+                
+                ctx.rotate(i * segmentAngle + segmentAngle / 2 + Math.PI / 2); 
+                ctx.textAlign = 'center'; 
+                ctx.fillText(segment, 0, -radius + 30);
+                ctx.restore();
+            });
+        }
+
+        // --- SETUP FUNCTION FOR VÒNG QUAY MAY MẮN ---
+        function setupVongQuay() {
+            const canvas = document.getElementById('wheel-canvas');
+            const spinButton = document.getElementById('spinButton');
+            const resultDisplay = document.getElementById('wheel-result');
+            const ctx = canvas.getContext('2d');
+            
+            const segments = ["TÝ", "SỬU", "DẦN", "MẸO", "THÌN", "TỴ", "NGỌ", "MÙI", "THÂN", "DẬU", "TUẤT", "HỢI"];
+            const segmentAngle = 2 * Math.PI / segments.length;
+
+            let currentRotation = 0; 
+            let isSpinning = false;
+            
+            spinButton.addEventListener('click', () => {
+                if (isSpinning) return;
+                
+                isSpinning = true;
+                spinButton.disabled = true;
+                resultDisplay.textContent = 'Đang quay...';
+
+                // Xác định tháng trúng thưởng TRƯỚC KHI QUAY
+                const targetSegmentIndex = Math.floor(Math.random() * segments.length);
+
+                let deltaRotation = (Math.floor(Math.random() * 5) + 5) * 2 * Math.PI; 
+                const centerOfTargetSegmentAngle = targetSegmentIndex * segmentAngle + segmentAngle / 2;
+                const targetRotation = (Math.PI / 2 - centerOfTargetSegmentAngle);
+                
+                deltaRotation += targetRotation - (currentRotation % (2 * Math.PI));
+
+                // Tăng thời gian và thay đổi hiệu ứng để chậm dần về cuối
+                canvas.style.transition = 'transform 8s cubic-bezier(0.23, 1, 0.32, 1)';
+                canvas.style.transform = `rotate(${currentRotation + deltaRotation}rad)`;
+                
+                currentRotation += deltaRotation;
+
+                setTimeout(() => {
+                    isSpinning = false;
+                    spinButton.disabled = false;
+                    
+                    // Hiển thị kết quả đã được xác định từ trước, không cần tính toán lại
+                    resultDisplay.textContent = `Chúc mừng! Kết quả là: ${segments[targetSegmentIndex]}`;
+                }, 8000); // Tăng thời gian chờ khớp với thời gian transition
+            });
+            
+            drawWheel(ctx, canvas); // Initial draw
+        }
+
+    </script>
+
+</body>
+</html>
+
