@@ -26,7 +26,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(26, 32, 44, 0.85); /* Lớp phủ màu tối bán trong suốt */
+            background-color: rgba(17, 24, 39, 0.9); /* Darker overlay */
             z-index: -1;
         }
         
@@ -38,12 +38,18 @@
         .tab-button.active {
             border-bottom-color: #f59e0b; /* yellow-500 */
             color: #f59e0b;
+            text-shadow: 0 0 8px rgba(245, 158, 11, 0.7);
         }
         .tab-content {
             display: none;
         }
         .tab-content.active {
             display: block;
+            animation: fadeInContent 0.5s ease-in-out;
+        }
+        @keyframes fadeInContent {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .mono-font {
@@ -52,6 +58,7 @@
         .prize-card {
             transition: all 0.3s ease;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            border: 2px solid transparent;
         }
         .winner-number {
             animation: fadeIn 0.5s ease-in-out;
@@ -65,6 +72,7 @@
         }
         .draw-button {
             transition: all 0.2s ease;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
         }
         .draw-button:hover:not(:disabled) {
             transform: translateY(-2px);
@@ -74,6 +82,37 @@
             transform: translateY(1px);
         }
 
+        /* NEW Effects */
+        .text-gradient {
+            background-image: linear-gradient(to right, #fde047, #f59e0b, #fbbf24);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        @keyframes pulsate {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 15px rgba(0,0,0, 0.5); }
+            50% { transform: scale(1.03); box-shadow: 0 0 25px rgba(0,0,0, 0.8); }
+        }
+        .draw-button:not(:disabled) {
+            animation: pulsate 2s infinite ease-in-out;
+        }
+
+        @keyframes glow {
+            from { border-color: #f59e0b; box-shadow: 0 0 10px #f59e0b; }
+            to { border-color: #fde047; box-shadow: 0 0 20px #fde047; }
+        }
+        .glowing-border {
+            animation: glow 1.5s infinite alternate ease-in-out;
+        }
+
+        @keyframes pop-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        #wheel-result.animate-result {
+            animation: pop-in 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        
         /* Confetti Effect */
         .confetti-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -126,20 +165,27 @@
             margin: 2rem auto;
         }
         #wheel-canvas {
-            transition: transform 5s cubic-bezier(0.25, 0.1, 0.25, 1);
-            transform-origin: center center; /* Ensure rotation is from the center */
+            transition: transform 8s cubic-bezier(0.23, 1, 0.32, 1);
+            transform-origin: center center;
+            filter: drop-shadow(0 0 20px rgba(0,0,0,0.6));
         }
         #wheel-pointer {
             position: absolute;
             left: 50%;
-            bottom: -20px; /* Chuyển mũi tên xuống dưới */
+            bottom: -20px;
             transform: translateX(-50%);
             width: 0;
             height: 0;
             border-left: 25px solid transparent;
             border-right: 25px solid transparent;
-            border-bottom: 50px solid #f59e0b; /* Đổi thành border-bottom để mũi tên hướng lên */
+            border-bottom: 50px solid #f59e0b; /* yellow-500 */
             z-index: 10;
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
+            animation: pulsate-pointer 1.5s infinite ease-in-out;
+        }
+        @keyframes pulsate-pointer {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.05); }
         }
     </style>
 </head>
@@ -153,7 +199,7 @@
 
         <!-- Tab Content: Rút Thăm Trúng Thưởng --><div id="content-rut-tham" class="tab-content active">
             <header class="text-center mb-8">
-                <h1 class="text-4xl md:text-5xl font-bold text-yellow-400 tracking-wider">CHƯƠNG TRÌNH RÚT THĂM TRÚNG THƯỞNG</h1>
+                <h1 class="text-4xl md:text-5xl font-bold tracking-wider text-gradient">CHƯƠNG TRÌNH RÚT THĂM TRÚNG THƯỞNG</h1>
                 <p class="text-gray-400 mt-2">Chúc Quý Vị May Mắn!</p>
             </header>
             <main class="text-center mb-8">
@@ -170,7 +216,7 @@
 
         <!-- Tab Content: Vòng Quay May Mắn --><div id="content-vong-quay" class="tab-content">
             <header class="text-center mb-8">
-                <h1 class="text-4xl md:text-5xl font-bold text-yellow-400 tracking-wider">VÒNG QUAY MAY MẮN</h1>
+                <h1 class="text-4xl md:text-5xl font-bold tracking-wider text-gradient">VÒNG QUAY MAY MẮN</h1>
                 <p class="text-gray-400 mt-2">Hãy thử vận may của bạn!</p>
             </header>
             <main class="text-center mb-8">
@@ -219,10 +265,9 @@
                 tabRutTham.classList.remove('active');
                 contentVongQuay.classList.add('active');
                 contentRutTham.classList.remove('active');
-                // Ensure wheel is drawn when tab is activated
                 const canvas = document.getElementById('wheel-canvas');
                 const ctx = canvas.getContext('2d');
-                drawWheel(ctx, canvas); // Redraw wheel if switching tabs
+                drawWheel(ctx, canvas);
             });
 
             // --- PHẦN 1: RÚT THĂM TRÚNG THƯỞNG ---
@@ -255,13 +300,14 @@
             const modalConfirmYes = document.getElementById('modalConfirmYes');
             const modalConfirmNo = document.getElementById('modalConfirmNo');
             const confettiContainer = document.getElementById('confetti-container');
+            const displayArea = document.getElementById('display-area');
 
             function initializeUI() {
-                prizesGrid.innerHTML = ''; // Clear grid before initializing
+                prizesGrid.innerHTML = '';
                 prizeTiers.forEach(tier => {
                     const prizeCard = document.createElement('div');
                     prizeCard.id = `prize-${tier.id}`;
-                    prizeCard.className = `prize-card ${tier.color} p-6 rounded-xl border border-gray-600`;
+                    prizeCard.className = `prize-card ${tier.color} p-6 rounded-xl border-2 border-gray-700`;
                     prizeCard.innerHTML = `
                         <h3 class="text-2xl font-bold ${tier.textColor} mb-4">${tier.name} (${tier.count} giải)</h3>
                         <div id="winners-${tier.id}" class="grid grid-cols-3 sm:grid-cols-4 gap-2"></div>`;
@@ -270,6 +316,9 @@
             }
 
             function updatePrizeLabel() {
+                // Remove glow from all cards first
+                document.querySelectorAll('.prize-card').forEach(card => card.classList.remove('glowing-border'));
+
                 if (currentTierIndex >= prizeTiers.length) {
                     currentPrizeLabel.textContent = 'Đã quay xong tất cả giải thưởng!';
                     drawButton.textContent = 'KẾT THÚC';
@@ -282,6 +331,8 @@
                     currentPrizeLabel.textContent = `Chuẩn bị quay ${currentTier.name} (${remaining} giải còn lại)`;
                     drawButton.textContent = 'QUAY SỐ';
                     drawButton.disabled = false;
+                    // Add glow to the current prize card
+                    document.getElementById(`prize-${currentTier.id}`).classList.add('glowing-border');
                 } else {
                     currentTierIndex++;
                     updatePrizeLabel();
@@ -297,6 +348,7 @@
                 isSpinning = true;
                 drawButton.disabled = true;
                 drawButton.textContent = 'ĐANG QUAY...';
+                displayArea.classList.add('glowing-border');
                 let spinCount = 0;
                 const spinInterval = setInterval(() => {
                     const randomNumber = Math.floor(Math.random() * 90) + 1;
@@ -357,6 +409,7 @@
             function finishCurrentDraw() {
                 isSpinning = false;
                 currentWinningNumber = null;
+                displayArea.classList.remove('glowing-border');
                 updatePrizeLabel();
             }
 
@@ -394,7 +447,7 @@
         }
 
         // --- VONG QUAY HELPER FUNCTION (MOVED OUTSIDE FOR GLOBAL SCOPE) ---
-        function drawWheel(ctx, canvas) {
+        function drawWheel(ctx, canvas, highlightIndex = -1) {
             const segments = ["TÝ", "SỬU", "DẦN", "MẸO", "THÌN", "TỴ", "NGỌ", "MÙI", "THÂN", "DẬU", "TUẤT", "HỢI"];
             const colors = ["#8B0000", "#FF4500", "#FFD700", "#ADFF2F", "#008000", "#48D1CC", "#0000CD", "#8A2BE2", "#C71585", "#FF1493", "#A52A2A", "#D2691E"];
             const segmentAngle = 2 * Math.PI / segments.length;
@@ -406,15 +459,14 @@
                 ctx.moveTo(radius, radius);
                 ctx.arc(radius, radius, radius - 5, i * segmentAngle, (i + 1) * segmentAngle);
                 ctx.closePath();
-                ctx.fillStyle = colors[i % colors.length];
+                ctx.fillStyle = (i === highlightIndex) ? '#FFF' : colors[i % colors.length]; // Highlight color
                 ctx.fill();
-                ctx.strokeStyle = '#4A5568'; // gray-700
+                ctx.strokeStyle = '#4A5568';
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // Draw text
                 ctx.save();
-                ctx.fillStyle = 'white';
+                ctx.fillStyle = (i === highlightIndex) ? '#000' : '#FFF';
                 ctx.font = 'bold 16px Be Vietnam Pro';
                 ctx.translate(radius, radius);
                 
@@ -444,32 +496,44 @@
                 isSpinning = true;
                 spinButton.disabled = true;
                 resultDisplay.textContent = 'Đang quay...';
+                resultDisplay.classList.remove('animate-result');
+                drawWheel(ctx, canvas); // Reset wheel before spin
 
-                // Xác định tháng trúng thưởng TRƯỚC KHI QUAY
                 const targetSegmentIndex = Math.floor(Math.random() * segments.length);
-
                 let deltaRotation = (Math.floor(Math.random() * 5) + 5) * 2 * Math.PI; 
                 const centerOfTargetSegmentAngle = targetSegmentIndex * segmentAngle + segmentAngle / 2;
                 const targetRotation = (Math.PI / 2 - centerOfTargetSegmentAngle);
                 
                 deltaRotation += targetRotation - (currentRotation % (2 * Math.PI));
 
-                // Tăng thời gian và thay đổi hiệu ứng để chậm dần về cuối
                 canvas.style.transition = 'transform 8s cubic-bezier(0.23, 1, 0.32, 1)';
                 canvas.style.transform = `rotate(${currentRotation + deltaRotation}rad)`;
-                
                 currentRotation += deltaRotation;
 
                 setTimeout(() => {
                     isSpinning = false;
                     spinButton.disabled = false;
                     
-                    // Hiển thị kết quả đã được xác định từ trước, không cần tính toán lại
                     resultDisplay.textContent = `Chúc mừng! Kết quả là: ${segments[targetSegmentIndex]}`;
-                }, 8000); // Tăng thời gian chờ khớp với thời gian transition
+                    resultDisplay.classList.add('animate-result');
+
+                    // Highlight the winning segment
+                    let flashCount = 0;
+                    const flashInterval = setInterval(() => {
+                        flashCount++;
+                        if (flashCount > 5) {
+                            clearInterval(flashInterval);
+                            drawWheel(ctx, canvas, targetSegmentIndex); // Keep it highlighted
+                            return;
+                        }
+                        // Alternate between highlighted and normal
+                        drawWheel(ctx, canvas, flashCount % 2 === 1 ? targetSegmentIndex : -1);
+                    }, 300);
+
+                }, 8000);
             });
             
-            drawWheel(ctx, canvas); // Initial draw
+            drawWheel(ctx, canvas);
         }
 
     </script>
